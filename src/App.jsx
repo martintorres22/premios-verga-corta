@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import confetti from 'canvas-confetti';
 import { 
   Trophy, 
@@ -9,12 +9,13 @@ import {
   Lock, 
   Sparkles, 
   PartyPopper,
-  ArrowRight
+  ArrowRight,
+  RefreshCw
 } from 'lucide-react';
 import CategoryCard from './components/CategoryCard';
 import InspirationPills from './components/InspirationPills';
 import AdminPanel from './components/AdminPanel';
-import { submitNominations } from './services/storage';
+import { submitNominations, autoSyncLocalToCloud } from './services/storage';
 
 export default function App() {
   const [userName, setUserName] = useState('');
@@ -25,6 +26,22 @@ export default function App() {
   const [isSuccess, setIsSuccess] = useState(false);
   const [submittedCount, setSubmittedCount] = useState(0);
   const [showAdmin, setShowAdmin] = useState(false);
+  const [syncedBanner, setSyncedBanner] = useState(0);
+
+  // Auto sync previous local entries on this device to cloud
+  useEffect(() => {
+    async function runAutoSync() {
+      try {
+        const res = await autoSyncLocalToCloud();
+        if (res && res.synced > 0) {
+          setSyncedBanner(res.synced);
+        }
+      } catch (err) {
+        console.warn('Auto-sync error:', err);
+      }
+    }
+    runAutoSync();
+  }, []);
 
   // Add new empty category card box
   const handleAddCategory = (initialTitle = '', initialDesc = '') => {
@@ -118,6 +135,14 @@ export default function App() {
           </span>
         </h1>
       </header>
+
+      {/* Auto-sync Banner if local entries were found and uploaded */}
+      {syncedBanner > 0 && (
+        <div style={{ background: 'rgba(34, 197, 94, 0.15)', border: '1px solid rgba(34, 197, 94, 0.3)', color: '#4ADE80', padding: '12px 16px', borderRadius: '14px', fontSize: '0.88rem', display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <RefreshCw size={20} style={{ flexShrink: 0 }} />
+          <span>¡Genial! Hemos rescatado y subido automáticamente <strong>{syncedBanner} categoría(s)</strong> que habías guardado previamente en este móvil a la base de datos de la gala. 🎉</span>
+        </div>
+      )}
 
       {/* Main Content Form */}
       {!isSuccess ? (

@@ -82,6 +82,47 @@ export function getLocalSubmissions() {
 }
 
 /**
+ * Automatically sync any previously saved local submissions from this phone into Supabase cloud.
+ */
+export async function autoSyncLocalToCloud() {
+  if (!supabase) return { synced: 0 };
+  const local = getLocalSubmissions();
+  if (!local || local.length === 0) return { synced: 0 };
+
+  const syncedKey = 'losver_synced_ids_2026';
+  const syncedIds = JSON.parse(localStorage.getItem(syncedKey) || '[]');
+  let newlySyncedCount = 0;
+
+  for (const sub of local) {
+    if (syncedIds.includes(sub.id)) continue; // Already synced
+
+    try {
+      const cleanCategories = (sub.categories || []).filter(c => c.title && c.title.trim().length > 0);
+      if (cleanCategories.length > 0) {
+        const { error } = await supabase.from('nominations').insert(
+          cleanCategories.map(cat => ({
+            user_name: (sub.userName || 'Anónimo').trim(),
+            category_title: cat.title.trim(),
+            category_description: (cat.description || '').trim(),
+            submitted_at: sub.timestamp || new Date().toISOString()
+          }))
+        );
+
+        if (!error) {
+          syncedIds.push(sub.id);
+          newlySyncedCount += cleanCategories.length;
+        }
+      }
+    } catch (e) {
+      console.warn('Error durante auto-sincronización:', e);
+    }
+  }
+
+  localStorage.setItem(syncedKey, JSON.stringify(syncedIds));
+  return { synced: newlySyncedCount };
+}
+
+/**
  * Fetch and aggregate all nominations for the Admin view.
  * Requires valid Admin PIN authorization.
  * 
