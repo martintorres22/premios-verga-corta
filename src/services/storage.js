@@ -1,12 +1,10 @@
 import { createClient } from '@supabase/supabase-js';
 
-// Supabase client initialization (optional env variables)
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || '';
-const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || '';
+// Supabase client initialization
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://iksroqugjdvqiofetbvnr.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imlrc3JxdWdqZHZxaW9mZXRidm5yIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODUyNTM5ODEsImV4cCI6MjEwMDgyOTk4MX0.uL678iIdp0eipvUy1u7iObJ28M_aIMhaGBeXApjQuX0';
 
-export const supabase = (supabaseUrl && supabaseAnonKey) 
-  ? createClient(supabaseUrl, supabaseAnonKey) 
-  : null;
+export const supabase = createClient(supabaseUrl, supabaseAnonKey);
 
 const LOCAL_STORAGE_KEY = 'losver_gacorta_nominations_2026_v1';
 export const DEFAULT_ADMIN_PIN = import.meta.env.VITE_ADMIN_PIN || 'VERGA2026';
@@ -128,10 +126,14 @@ export async function fetchAdminData(pin) {
     }
   }
 
-  // If cloud data empty or unavailable, fallback to local storage
-  if (allSubmissions.length === 0) {
-    allSubmissions = getLocalSubmissions();
-  }
+  // Also combine local submissions if any exist
+  const localSubmissions = getLocalSubmissions();
+  localSubmissions.forEach(localSub => {
+    const existing = allSubmissions.find(s => s.userName.toLowerCase() === (localSub.userName || '').toLowerCase());
+    if (!existing) {
+      allSubmissions.push(localSub);
+    }
+  });
 
   // Aggregate by Category Title
   const categoryMap = new Map();
